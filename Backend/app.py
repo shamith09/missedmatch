@@ -21,39 +21,45 @@ def after_request(response):
 
 @app.route('/users/<user_id>', methods=['GET', 'PUT', 'DELETE'])
 def users(user_id):
+    id = ObjectId(user_id)
     if request.method == 'GET':
-        user = db.Users.find_one({'_id': ObjectId(user_id)})
-        if user is None:
+        user = db.Users.find_one({'_id': id})
+        if user:
+            user.pop('password')
+            user['id'] = str(user['_id'])
+            user.pop('_id')
+            return user, 200
+        return {'error': 'Not Found'}, 404
+    elif request.method == 'DELETE':
+        if db.Users.delete_one({'_id': id}).deleted_count == 0:
             return {'error': 'Not Found'}, 404
-        user.pop('password')
-        user['id'] = str(user['_id'])
-        user.pop('_id')
-        return user, 200
+        return {'message': 'User successfully deleted!'}, 200
 
 @app.route('/users', methods=['POST', 'GET'])
 def signup():
+    user = db.Users.find_one({'username': request.form.get('username')})
     if request.method == 'POST':
-        if db.Users.find_one({'username': request.form.get('username')}) is not None:
-            return {'error': 'Need unique username'}, 400
+        if user:
+            return {'message': 'Need unique username'}, 400
         user = {
             'username': request.form.get('username'),
+            'name': request.form.get('name'),
             'password': sha256.hash(request.form.get('password')),
             'creation_time': int(time()),
-            'age': request.form.get('age'),
+            'age': int(request.form.get('age')),
             #'profile_pic': request.files.get('profile_pic'),
             #'other_pics': request.files.getlist('other_pics')
         }
-        return {'_id': str(db.Users.insert_one(user).inserted_id)}, 200
+        db.Users.insert_one(user)
     elif request.method == 'GET':
-        user = db.Users.find_one({'username': request.form.get('username')})
         if user is None:
             return {'error': 'Wrong username'}, 404
-        if not sha256.verify(request.form.get('password'), user.get('password')):
+        if not sha256.verify(request.args.get('password'), user.get('password')):
             return {'error': 'Wrong password'}, 403
-        user.pop('password')
-        user['id'] = str(user['_id'])
-        user.pop('_id')
-        return user, 200
+    user.pop('password')
+    user['id'] = str(user['_id'])
+    user.pop('_id')
+    return user, 200
     
 if __name__ == '__main__':
     app.run(debug=getenv('DEBUG'), port=getenv('PORT'))

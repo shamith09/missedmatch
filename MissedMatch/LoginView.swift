@@ -6,52 +6,91 @@
 //
 
 import SwiftUI
+import Alamofire
 
 struct LoginView: View {
-    @State private var user = User()
-    @State private var isPresentingStatusView = false
+    @State private var login = Login()
+    @State private var secured = true
     
+    @Binding var user: User
+    @Binding var loginStatus: LoginStatus
+    
+    func request() -> Void {
+        AF.request(Constants.USER_ROUTE, parameters: login).responseDecodable(of: User.self) { response in
+            switch response.result {
+            case .success:
+                user = response.value!
+                loginStatus = .success
+            case .failure:
+                loginStatus = .failure
+            }
+        }
+    }
     var body: some View {
+        let foregroundColor: Color = loginStatus == .processing ? .gray : .primary
         VStack {
-            VStack {
-                let logo = UIImage(named: "MissedMatch Logo 2 Full")!
-                Image(uiImage: logo)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 250)
-            }
-            Spacer()
-            Text("Login")
-                .font(.title2)
-                .padding(.bottom)
-            TextField("Username", text: $user.username)
+            TextField("Username", text: $login.username)
                 .padding()
-                .frame(width: 250)
+                .frame(width: Constants.FIELD_WIDTH)
                 .autocapitalization(.none)
+                .disableAutocorrection(true)
                 .background(.ultraThinMaterial)
-            SecureField("Password", text: $user.password)
-                .padding()
-                .frame(width: 250)
-                .background(.ultraThinMaterial)
-            Button("Submit") {
-                isPresentingStatusView = true
+                .foregroundColor(foregroundColor)
+            HStack {
+                if secured {
+                    SecureField("Password", text: $login.password)
+                        .autocapitalization(.none)
+                } else {
+                    TextField("Password", text: $login.password)
+                        .autocapitalization(.none)
+                        .disableAutocorrection(true)
+                }
+                Button(action: {
+                    self.secured.toggle()
+                }) {
+                    if secured {
+                        Image(systemName: "eye")
+                    } else {
+                        Image(systemName: "eye.slash")
+                    }
+                }
             }
-            .frame(width: 120.0, height: 45.0)
+            .padding()
+            .frame(width: Constants.FIELD_WIDTH)
+            .background(.ultraThinMaterial)
+            .foregroundColor(foregroundColor)
+            if loginStatus == .failure {
+                Text("Wrong username or password. Try again.")
+                    .foregroundColor(.red)
+                    .font(.caption)
+            }
+            Button("Login") {
+                loginStatus = .processing
+                request()
+            }
+            .disabled(!login.isComplete)
+            .frame(width: Constants.BUTTON_WIDTH, height: Constants.BUTTON_HEIGHT)
+            .font(.title3)
+            .background(login.isComplete ? Constants.BACKGROUND_COLOR : .gray)
+            .foregroundColor(Constants.ACCENT_COLOR)
+            .cornerRadius(24)
+            .padding()
+            Text("If you don't have an account yet,")
+                .padding(.top)
+            NavigationLink(destination: SignupView(user: $user, loginStatus: $loginStatus)) {
+                Text("Sign Up")
+            }
+            .frame(width: Constants.BUTTON_WIDTH, height: Constants.BUTTON_HEIGHT)
             .font(.title3)
             .background(Constants.BACKGROUND_COLOR)
             .foregroundColor(Constants.ACCENT_COLOR)
             .cornerRadius(24)
-            .padding()
-            Spacer()
-                .sheet(isPresented: $isPresentingStatusView) {
-                // LoginStatusView(loginCase: loginCase)
-            }
         }
     }
 }
 
 struct LoginView_Previews: PreviewProvider {
     static var previews: some View {
-        LoginView()
+        LoginView(user: .constant(.sampleUser), loginStatus: .constant(.pending))
     }
 }

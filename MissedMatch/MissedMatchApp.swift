@@ -10,11 +10,15 @@ import SwiftUI
 // main color: (0, 179, 255)
 @main
 struct MissedMatchApp: App {
+    @State private var user = User()
+    @State private var loginStatus = LoginStatus.pending
+    
     var body: some Scene {
         WindowGroup {
             NavigationView {
-                LoginView()
+                LoginView(user: $user, loginStatus: $loginStatus)
             }
         }
     }
 }
+
