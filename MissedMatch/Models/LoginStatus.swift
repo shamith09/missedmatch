@@ -12,4 +12,5 @@ enum LoginStatus {
     case failure
     case pending
     case processing
+    case loading
 }

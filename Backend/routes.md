@@ -8,6 +8,7 @@
         age: int
         profile_pic: image?
         other_pics: [image]?
+        location: [double]
     }
 
     Response: {
@@ -28,4 +29,5 @@
         creation_date: int
         profile_pic: image
         other_pics: [image]
+        location: [double]
     }

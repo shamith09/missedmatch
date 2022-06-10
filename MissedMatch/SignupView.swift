@@ -16,11 +16,14 @@ struct SignupView: View {
     @Binding var user: User
     @Binding var loginStatus: LoginStatus
     
+    @EnvironmentObject var locationManager: LocationManager
+
     func request() -> Void {
         AF.request(Constants.USER_ROUTE, method: .post, parameters: signup).responseDecodable(of: User.self) { response in
             switch response.result {
             case .success:
                 user = response.value!
+                locationManager.id = user.id
                 loginStatus = .success
             case .failure:
                 loginStatus = .failure
@@ -38,15 +41,15 @@ struct SignupView: View {
         let foregroundColor: Color = loginStatus == .processing ? .gray : .primary
         VStack {
             TextField("Name", text: $signup.name)
-                .padding()
                 .frame(width: Constants.FIELD_WIDTH)
+                .padding()
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
                 .background(.ultraThinMaterial)
                 .foregroundColor(foregroundColor)
             DatePicker("Birthday", selection: $birthDate, in: ...Date(), displayedComponents: .date)
-                .padding()
                 .frame(width: Constants.FIELD_WIDTH)
+                .padding(.vertical)
             if Date.now.years(from: birthDate) < Constants.MIN_AGE {
                 Text("You must be at least \(Constants.MIN_AGE) years old to use this app.")
                     .font(.caption)
@@ -54,8 +57,8 @@ struct SignupView: View {
                     .foregroundColor(.red)
             }
             TextField("Username", text: $signup.username)
-                .padding()
                 .frame(width: Constants.FIELD_WIDTH)
+                .padding()
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
                 .background(.ultraThinMaterial)
@@ -83,8 +86,8 @@ struct SignupView: View {
                     }
                 }
             }
-            .padding()
             .frame(width: Constants.FIELD_WIDTH)
+            .padding()
             .background(.ultraThinMaterial)
             .foregroundColor(foregroundColor)
             if signup.password.count < Constants.PASSWORD_LENGTH {
@@ -95,15 +98,20 @@ struct SignupView: View {
             Button("Sign Up") {
                 loginStatus = .processing
                 signup.age = Date.now.years(from: birthDate)
+                signup.latitude = Double((locationManager.location?.coordinate.latitude)!)
+                signup.longitude = Double((locationManager.location?.coordinate.longitude)!)
                 request()
             }
-            .disabled(!signup.isComplete && Date.now.years(from: birthDate) < Constants.MIN_AGE)
+            .disabled(!signup.isComplete || Date.now.years(from: birthDate) < Constants.MIN_AGE)
             .frame(width: Constants.BUTTON_WIDTH, height: Constants.BUTTON_HEIGHT)
             .font(.title3)
             .background(signup.isComplete && Date.now.years(from: birthDate) >= Constants.MIN_AGE ? Constants.BACKGROUND_COLOR : .gray)
             .foregroundColor(Constants.ACCENT_COLOR)
             .cornerRadius(24)
             .padding()
+        }
+        .onAppear {
+            loginStatus = .pending
         }
     }
 }
@@ -120,3 +128,4 @@ extension Date {
         return Calendar.current.dateComponents([.year], from: date, to: self).year ?? 0
     }
 }
+

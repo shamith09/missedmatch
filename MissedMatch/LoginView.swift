@@ -15,12 +15,15 @@ struct LoginView: View {
     @Binding var user: User
     @Binding var loginStatus: LoginStatus
     
+    @EnvironmentObject var locationManager: LocationManager
+    
     func request() -> Void {
         AF.request(Constants.USER_ROUTE, parameters: login).responseDecodable(of: User.self) { response in
             switch response.result {
             case .success:
                 user = response.value!
                 loginStatus = .success
+                locationManager.id = user.id
             case .failure:
                 loginStatus = .failure
             }
@@ -30,8 +33,8 @@ struct LoginView: View {
         let foregroundColor: Color = loginStatus == .processing ? .gray : .primary
         VStack {
             TextField("Username", text: $login.username)
-                .padding()
                 .frame(width: Constants.FIELD_WIDTH)
+                .padding()
                 .autocapitalization(.none)
                 .disableAutocorrection(true)
                 .background(.ultraThinMaterial)
@@ -55,8 +58,8 @@ struct LoginView: View {
                     }
                 }
             }
-            .padding()
             .frame(width: Constants.FIELD_WIDTH)
+            .padding()
             .background(.ultraThinMaterial)
             .foregroundColor(foregroundColor)
             if loginStatus == .failure {
@@ -86,6 +89,11 @@ struct LoginView: View {
             .foregroundColor(Constants.ACCENT_COLOR)
             .cornerRadius(24)
         }
+        .onAppear {
+            loginStatus = .pending
+        }
+        .navigationTitle(Text("Login"))
+        .navigationBarHidden(true)
     }
 }
 
@@ -94,3 +102,4 @@ struct LoginView_Previews: PreviewProvider {
         LoginView(user: .constant(.sampleUser), loginStatus: .constant(.pending))
     }
 }
+
